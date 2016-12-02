@@ -1,4 +1,5 @@
 require 'mini_magick'
+require 'pathname'
 
 module Jekyll
   module JekyllMinimagick
@@ -63,9 +64,19 @@ module Jekyll
       def generate(site)
         return unless site.config['mini_magick']
 
+        Jekyll.logger.info("MiniMagick plugin loaded.")
+
         site.config['mini_magick'].each_pair do |name, preset|
-          Dir.glob(File.join(site.source, preset['source'], "*.{png,jpg,jpeg,gif}")) do |source|
-            site.static_files << GeneratedImageFile.new(site, site.source, preset['destination'], File.basename(source), preset.clone)
+          src_dir = Pathname.new(site.source) + preset['source']
+          Jekyll.logger.info("MiniMagicking #{name} from " +
+                             "#{preset['source']} => #{preset['destination']}")
+
+          Dir.glob(src_dir + "**" + "*.{png,jpg,jpeg,gif}") do |img|
+            relative_img = Pathname.new(img).relative_path_from(src_dir)
+            Jekyll.logger.debug("\t#{relative_img}")
+
+            site.static_files << GeneratedImageFile.new(
+              site, site.source, preset['destination'], relative_img.to_s, preset.clone)
           end
         end
       end
